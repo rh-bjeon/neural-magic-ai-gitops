@@ -24,6 +24,7 @@ spec:
         - args:
             - -ec
             - |-
+              pip install --no-cache-dir huggingface_hub
               cat << 'EOF' | python3
               import boto3, os
               s3 = boto3.client("s3",
@@ -34,6 +35,32 @@ spec:
               print('creating models bucket')
               if bucket not in [bu["Name"] for bu in s3.list_buckets()["Buckets"]]:
                 s3.create_bucket(Bucket=bucket)
+
+              from huggingface_hub import snapshot_download
+              model_repo='{{ .Values.modelRepo }}'
+              base_model="./base_model"
+              snapshot_download(repo_id=model_repo, local_dir=base_model)
+              print(f"Model downloaded to {base_model}")
+
+              print(f"Attempting to upload files from {base_model}")
+              print(os.listdir(base_model))
+
+              print("Uploading to s3: ")
+              for root, dirs, files in os.walk(base_model):
+                  for filename in files:
+                      file_path = os.path.join(root, filename)
+                      relative_path = os.path.relpath(file_path, base_model)
+                      if ".git" in relative_path:
+                          continue
+                      s3_key = os.path.join(bucket, relative_path)
+                      print(f"{file_path} -> {s3_key}")
+                      bucket.upload_file(file_path, s3_key)
+
+              filter = bucket.objects.filter(Prefix=bucket)
+              print("Listing Objects: ")
+              for obj in filter.all():
+                  print(obj.key)
+              print("done")
               EOF
           command:
             - /bin/bash

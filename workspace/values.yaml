@@ -5,3 +5,4 @@
 username: user1
 
 jobImage: image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/s2i-generic-data-science-notebook:2024.1
+modelRepo: ibm-granite/granite-3.2-2b-instruct
