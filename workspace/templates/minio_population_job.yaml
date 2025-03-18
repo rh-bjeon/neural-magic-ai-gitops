@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: minio
     app.kubernetes.io/part-of: minio
     component: minio
-  name: create-minio-buckets
+  name: populate-minio-buckets
   namespace: wksp-{{ .Values.username }}
 spec:
   selector: {}
@@ -31,32 +31,35 @@ spec:
                                 endpoint_url="http://minio-service:9000",
                                 aws_access_key_id=os.getenv("MINIO_ROOT_USER"),
                                 aws_secret_access_key=os.getenv("MINIO_ROOT_PASSWORD"))
+
+              model_repo='{{ .Values.modelRepo }}'
               bucket = '{{ .Values.username }}'
+              model_s3_path = "base_model"
+              base_model_path="/opt/app-root/src/base_model"
+
               print('creating models bucket')
               if bucket not in [bu["Name"] for bu in s3.list_buckets()["Buckets"]]:
                 s3.create_bucket(Bucket=bucket)
 
               from huggingface_hub import snapshot_download
-              model_repo='{{ .Values.modelRepo }}'
-              base_model="./base_model"
-              snapshot_download(repo_id=model_repo, local_dir=base_model)
-              print(f"Model downloaded to {base_model}")
+              snapshot_download(repo_id=model_repo, local_dir=base_model_path)
+              print(f"Model downloaded to {base_model_path}")
 
-              print(f"Attempting to upload files from {base_model}")
-              print(os.listdir(base_model))
+              print(f"Attempting to upload files from {base_model_path}")
+              print(os.listdir(base_model_path))
 
               print("Uploading to s3: ")
-              for root, dirs, files in os.walk(base_model):
+              for root, dirs, files in os.walk(base_model_path):
                   for filename in files:
                       file_path = os.path.join(root, filename)
-                      relative_path = os.path.relpath(file_path, base_model)
+                      relative_path = os.path.relpath(file_path, base_model_path)
                       if ".git" in relative_path:
                           continue
-                      s3_key = os.path.join(bucket, relative_path)
+                      s3_key = os.path.join(model_s3_path, relative_path)
                       print(f"{file_path} -> {s3_key}")
                       bucket.upload_file(file_path, s3_key)
 
-              filter = bucket.objects.filter(Prefix=bucket)
+              filter = bucket.objects.filter(Prefix=model_s3_path)
               print("Listing Objects: ")
               for obj in filter.all():
                   print(obj.key)
