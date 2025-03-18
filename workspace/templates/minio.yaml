@@ -25,6 +25,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: minio
+  namespace: wksp-{{ .Values.username }}
 spec:
   replicas: 1
   selector:
