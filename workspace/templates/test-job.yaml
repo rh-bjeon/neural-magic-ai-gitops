@@ -32,8 +32,8 @@ spec:
                                 aws_access_key_id=os.getenv("MINIO_ROOT_USER"),
                                 aws_secret_access_key=os.getenv("MINIO_ROOT_PASSWORD"))
 
-              model_repo="HF_REPO_OWNER/HF_REPO_NAME"
-              model_s3_path = "HF_REPO"
+              model_repo= os.getenv("HF_REPO")
+              model_s3_path = os.getenv("MODEL_NAME")
               bucket_name ="models"
               base_model_path="/opt/app-root/src/base_model"
 
@@ -95,8 +95,8 @@ spec:
                   key: minio_root_password
             - name: MINIO_URL
               value: "http://minio-service.minio.svc.cluster.local:9000"
-            - name: HF_REPO_OWNER
-              value: "Qwen"
-            - name: HF_REPO_NAME
+            - name: HF_REPO
+              value: "Qwen/Qwen3-4B-Thinking-2507"
+            - name: MODEL_NAME
               value: "Qwen3-4B-Thinking-2507"
       restartPolicy: OnFailure
