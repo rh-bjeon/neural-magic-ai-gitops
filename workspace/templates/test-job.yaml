@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/part-of: minio
     component: minio
   name: populate-minio-buckets
+  namespace: minio
 spec:
   selector: {}
   template:
@@ -31,9 +32,9 @@ spec:
                                 aws_access_key_id=os.getenv("MINIO_ROOT_USER"),
                                 aws_secret_access_key=os.getenv("MINIO_ROOT_PASSWORD"))
 
-              model_repo="ibm-granite/granite-3.2-2b-instruct"
-              bucket_name ="user5"
-              model_s3_path = "base_model"
+              model_repo="HF_REPO_OWNER/HF_REPO_NAME"
+              model_s3_path = "HF_REPO"
+              bucket_name ="models"
               base_model_path="/opt/app-root/src/base_model"
 
               print('creating models bucket')
@@ -78,6 +79,9 @@ spec:
               EOF
           command:
             - /bin/bash
+          image: image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/s2i-generic-data-science-notebook:2025.1
+          imagePullPolicy: IfNotPresent
+          name: create-buckets
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
@@ -91,7 +95,8 @@ spec:
                   key: minio_root_password
             - name: MINIO_URL
               value: "http://minio-service.minio.svc.cluster.local:9000"
-          image: image-registry.openshift-image-registry.svc:5000/redhat-ods-applications/s2i-generic-data-science-notebook:2025.1
-          imagePullPolicy: IfNotPresent
-          name: create-buckets
+            - name: HF_REPO_OWNER
+              value: "Qwen"
+            - name: HF_REPO_NAME
+              value: "Qwen3-4B-Thinking-2507"
       restartPolicy: OnFailure
