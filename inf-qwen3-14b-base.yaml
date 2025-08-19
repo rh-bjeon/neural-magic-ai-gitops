@@ -50,7 +50,7 @@ spec:
     model:
       modelFormat:
         name: vLLM
-      runtime: vllm-cuda-runtime
+      runtime: qwen3-14b-base
       storageUri: pvc://qwen3-14b-base/qwen3-14b
       resources:
         limits:
