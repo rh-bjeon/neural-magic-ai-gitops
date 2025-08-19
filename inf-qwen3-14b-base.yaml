@@ -1,0 +1,29 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    openshift.io/display-name: Qwen3-14B-base
+    serving.kserve.io/deploymentMode: RawDeployment
+  name: qwen3-14b-base
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-cuda-runtime
+      storageUri: pvc://qwen3-14b-base/qwen3-14b
+      resources:
+        limits:
+          cpu: '24'
+          memory: 64Gi
+          nvidia.com/gpu: '1'
+        requests:
+          cpu: '12'
+          memory: 32Gi
+          nvidia.com/gpu: '1'
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
