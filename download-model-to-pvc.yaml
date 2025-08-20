@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: download-model-to-pvc
+  labels:
+    name: download-model-to-pvc
+spec:
+  restartPolicy: Never
+  initContainers:
+    - name: fix-volume-permissions
+      image: quay.io/quay/busybox@sha256:92f3298bf80a1ba949140d77987f5de081f010337880cd771f7e7fc928f8c74d
+      command: ["sh"]
+      args: ["-c", "mkdir -p /mnt/models/$(MODEL_PATH) && chmod -R 777 /mnt/models"] 
+      volumeMounts:
+        - mountPath: "/mnt/models/"
+          name: model-volume
+      env:
+        - name: MODEL_PATH
+          value: <model path> ############## 이곳을 수정
+  containers:
+    - resources:
+        requests:
+          memory: 40Gi
+      name: download-model
+      imagePullPolicy: IfNotPresent
+      image: quay.io/opendatahub/kserve-storage-initializer:v0.14 
+      args:
+        - 's3://$(BUCKET_NAME)/$(MODEL_PATH)/'
+        - /mnt/models/$(MODEL_PATH)
+      volumeMounts:
+        - mountPath: "/mnt/models/"
+          name: model-volume
+      env:
+        - name: S3_USE_HTTPS
+          value: "1"
+        - name: awsAnonymousCredential
+          value: 'false'
+        - name: S3_VERIFY_SSL
+          value: 'false' 
+############## 이곳을 수정
+        - name: AWS_ENDPOINT_URL
+          value: <AWS endpoint> 
+        - name: AWS_ACCESS_KEY_ID
+          value: <id> 
+        - name: AWS_SECRET_ACCESS_KEY
+          value: <secret> 
+        - name: BUCKET_NAME
+          value: <bucket_name> 
+        - name: MODEL_PATH
+          value: <model path> 
+        - name: AWS_DEFAULT_REGION
+          value: <region> 
+  volumes:
+    - name: model-volume
+      persistentVolumeClaim:
+        claimName: <PVC Claim name>
+############## 이곳을 수정
