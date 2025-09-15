@@ -1,0 +1,88 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  annotations:
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/runtime-version: v0.9.1.0
+    opendatahub.io/serving-runtime-scope: global
+    openshift.io/display-name: TP4 vLLM NVIDIA GPU ServingRuntime
+    opendatahub.io/template-display-name: TP4 vLLM NVIDIA GPU ServingRuntime for LLAMA4
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/hardware-profile-name: migrated-gpu-mglzi-serving
+    opendatahub.io/accelerator-name: "nvidia.com/gpu"
+  labels:
+    opendatahub.io/dashboard: "true"
+  name: servingruntime-for-tp4
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  containers:
+    - args:
+        - --port=8080
+        - --model=/mnt/models
+        - --served-model-name={{.Name}}
+        - --max-model-len=4096
+        - --gpu-memory-utilization=0.85
+        - --max-num-batched-tokens=1024
+        - --tensor-parallel-size=4
+        #- --shm-size=16GB
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      env:
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: NCCL_DEBUG
+          value: WARN
+      image: quay.io/modh/vllm:rhoai-2.20-cuda
+      name: kserve-container
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+  multiModel: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: vLLM
+  volumes:
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 16Gi
+      name: shm
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    openshift.io/display-name: Llama-4-Scout-17B-16E-Instruct-FP8-dynamic
+    serving.kserve.io/deploymentMode: RawDeployment
+    
+  labels:
+    opendatahub.io/dashboard: 'true'
+  name: llama-4-scout-17b-16e-instruct-fp8-dynamic
+spec:
+  predictor:
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: servingruntime-for-tp4
+      storageUri: pvc://llama4-quantized/llama-4-scout-17b-16e-instruct-fp8-dynamic
+      resources:
+        limits:
+          cpu: '24'
+          memory: 64Gi
+          nvidia.com/gpu: '4'
+        requests:
+          cpu: '12'
+          memory: 32Gi
+          nvidia.com/gpu: '4'
+    tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
